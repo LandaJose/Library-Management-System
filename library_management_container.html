@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- <meta charset="UTF-8" /> -->
+    <title>Library – Student Checkout</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        background: #f4f4f7;
+      }
+
+      .app {
+        display: flex;
+        height: 100vh;
+      }
+
+      /* LEFT PANEL – student search */
+      .sidebar {
+        width: 35%;
+        background: #fff;
+        border-right: 1px solid #ddd;
+        padding: 16px;
+        box-sizing: border-box;
+      }
+
+      .sidebar h2 {
+        margin-top: 0;
+      }
+
+      .search-box input {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        margin-bottom: 8px;
+      }
+
+      .student-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: calc(100vh - 140px);
+        overflow-y: auto;
+      }
+
+      .student-list li {
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+      }
+
+      .student-list li:hover {
+        background: #f0f0ff;
+      }
+
+      .student-list li.active {
+        background: #dfe7ff;
+        font-weight: bold;
+      }
+
+      /* RIGHT PANEL – details + scan */
+      .main {
+        flex: 1;
+        padding: 16px 24px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .student-name {
+        font-size: 1.3rem;
+        font-weight: bold;
+      }
+
+      .mode-toggle button {
+        padding: 6px 12px;
+        border: 1px solid #888;
+        background: #eee;
+        cursor: pointer;
+        margin-left: 4px;
+      }
+
+      .mode-toggle button.active {
+        background: #4b6cff;
+        color: #fff;
+        border-color: #4b6cff;
+      }
+
+      .scan-section {
+        background: #fff;
+        padding: 12px 16px;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 16px;
+      }
+
+      .scan-section label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: bold;
+      }
+
+      .scan-section input {
+        width: 100%;
+        padding: 10px;
+        font-size: 1rem;
+        box-sizing: border-box;
+      }
+
+      .status {
+        margin-top: 8px;
+        font-size: 0.95rem;
+        min-height: 20px;
+      }
+
+      .status.ok {
+        color: #0b7c21;
+      }
+
+      .status.error {
+        color: #b00020;
+      }
+
+      .loan-list {
+        background: #fff;
+        padding: 12px 16px;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        flex: 1;
+        overflow-y: auto;
+      }
+
+      .loan-list h3 {
+        margin-top: 0;
+      }
+
+      .loan-list table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+      }
+
+      .loan-list th,
+      .loan-list td {
+        padding: 6px 4px;
+        border-bottom: 1px solid #eee;
+        text-align: left;
+      }
+
+      .loan-list th {
+        font-weight: bold;
+        background: #f9f9f9;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- LEFT: Student search -->
+      <div class="sidebar">
+        <h2>Students</h2>
+        <div class="search-box">
+          <input
+            id="studentSearch"
+            type="text"
+            placeholder="Search student by name…"
+          />
+        </div>
+        <ul id="studentList" class="student-list">
+          <!-- filled by JS -->
+        </ul>
+      </div>
+
+      <!-- RIGHT: Student details + scan -->
+      <div class="main">
+        <div class="header-row">
+          <div class="student-name" id="studentName">Select a student…</div>
+          <div class="mode-toggle">
+            Mode:
+            <button id="modeCheckout" class="active">Check-Out</button>
+            <button id="modeCheckin">Check-In</button>
+          </div>
+        </div>
+
+        <div class="scan-section">
+          <label id="scanLabel">Scan Book ISBN</label>
+          <input
+            id="isbnInput"
+            type="text"
+            placeholder="Click here then scan ISBN…"
+          />
+          <div id="status" class="status"></div>
+        </div>
+
+        <div class="loan-list">
+          <h3>Current Books</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>ISBN</th>
+                <th>Due Date</th>
+              </tr>
+            </thead>
+            <tbody id="loanTableBody">
+              <!-- filled by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // TEMP FAKE DATA – replace with DB calls later
+      const students = [
+        { id: 1, name: "Alex Martinez" },
+        { id: 2, name: "Brianna Lee" },
+        { id: 3, name: "Chris Johnson" },
+      ];
+
+      const fakeLoans = {
+        1: [
+          { title: "1984", isbn: "9780451524935", due: "2025-12-10" },
+          { title: "The Giver", isbn: "9780544336261", due: "2025-12-15" },
+        ],
+        2: [],
+        3: [{ title: "Hatchet", isbn: "9780689840920", due: "2025-12-08" }],
+      };
+
+      let selectedStudentId = null;
+      let mode = "checkout"; // or "checkin"
+
+      const studentListEl = document.getElementById("studentList");
+      const studentSearchEl = document.getElementById("studentSearch");
+      const studentNameEl = document.getElementById("studentName");
+      const loanTableBodyEl = document.getElementById("loanTableBody");
+      const isbnInputEl = document.getElementById("isbnInput");
+      const statusEl = document.getElementById("status");
+      const modeCheckoutBtn = document.getElementById("modeCheckout");
+      const modeCheckinBtn = document.getElementById("modeCheckin");
+      const scanLabelEl = document.getElementById("scanLabel");
+
+      // ---------- STUDENT LIST / SEARCH ----------
+
+      function renderStudentList(filter = "") {
+        const q = filter.toLowerCase();
+        studentListEl.innerHTML = "";
+        students
+          .filter((s) => s.name.toLowerCase().includes(q))
+          .forEach((s) => {
+            const li = document.createElement("li");
+            li.textContent = s.name;
+            li.dataset.id = s.id;
+            if (s.id === selectedStudentId) li.classList.add("active");
+            li.addEventListener("click", () => selectStudent(s.id));
+            studentListEl.appendChild(li);
+          });
+      }
+
+      function selectStudent(id) {
+        selectedStudentId = id;
+        const student = students.find((s) => s.id === id);
+        studentNameEl.textContent = student
+          ? student.name
+          : "Select a student…";
+        renderStudentList(studentSearchEl.value);
+        renderLoans();
+        clearStatus();
+        isbnInputEl.focus(); // Ready for scanning
+      }
+
+      function renderLoans() {
+        loanTableBodyEl.innerHTML = "";
+        if (!selectedStudentId) return;
+        const loans = fakeLoans[selectedStudentId] || [];
+        if (!loans.length) {
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = 3;
+          td.textContent = "No books currently checked out.";
+          tr.appendChild(td);
+          loanTableBodyEl.appendChild(tr);
+          return;
+        }
+        loans.forEach((loan) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+          <td>${loan.title}</td>
+          <td>${loan.isbn}</td>
+          <td>${loan.due}</td>
+        `;
+          loanTableBodyEl.appendChild(tr);
+        });
+      }
+
+      studentSearchEl.addEventListener("input", () => {
+        renderStudentList(studentSearchEl.value);
+      });
+
+      // ---------- MODE TOGGLE ----------
+
+      function setMode(newMode) {
+        mode = newMode; // "checkout" or "checkin"
+        if (mode === "checkout") {
+          modeCheckoutBtn.classList.add("active");
+          modeCheckinBtn.classList.remove("active");
+          scanLabelEl.textContent = "Scan Book ISBN to CHECK OUT";
+        } else {
+          modeCheckoutBtn.classList.remove("active");
+          modeCheckinBtn.classList.add("active");
+          scanLabelEl.textContent = "Scan Book ISBN to CHECK IN";
+        }
+        clearStatus();
+        isbnInputEl.focus();
+      }
+
+      modeCheckoutBtn.addEventListener("click", () => setMode("checkout"));
+      modeCheckinBtn.addEventListener("click", () => setMode("checkin"));
+
+      // ---------- SCAN HANDLING (works with scanner or keyboard) ----------
+
+      isbnInputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          const isbn = isbnInputEl.value.trim();
+          if (!isbn) return;
+          handleScan(isbn);
+          isbnInputEl.value = "";
+        }
+      });
+
+      function handleScan(isbn) {
+        if (!selectedStudentId) {
+          showStatus("Select a student first.", "error");
+          return;
+        }
+
+        // For now, just fake behavior.
+        // Later you’ll replace this with window.api.checkoutBook / checkinBook
+        if (mode === "checkout") {
+          showStatus(`(FAKE) Checked OUT ISBN ${isbn} to this student.`, "ok");
+          // TODO: Call backend to:
+          //  - find book by ISBN
+          //  - choose available copy
+          //  - create loan
+          //  - refresh loans from DB
+        } else {
+          showStatus(`(FAKE) Checked IN ISBN ${isbn} from this student.`, "ok");
+          // TODO: Call backend for check-in
+        }
+
+        // After real call, call renderLoans() to update table
+      }
+
+      function showStatus(message, type) {
+        statusEl.textContent = message;
+        statusEl.classList.remove("ok", "error");
+        if (type) statusEl.classList.add(type);
+      }
+
+      function clearStatus() {
+        showStatus("", null);
+      }
+
+      // ---------- INITIAL RENDER ----------
+      renderStudentList();
+    </script>
+  </body>
+</html>
