@@ -1,9 +1,10 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const Database = require("better-sqlite3");
 
 let db;
+let insertOrUpdateBook;
 
 // 1. Initialize SQLite and tables
 function initDatabase() {
@@ -50,6 +51,15 @@ function initDatabase() {
     );
   `);
 
+  // Prepare a reusable INSERT/UPDATE statement for books
+  insertOrUpdateBook = db.prepare(`
+    INSERT INTO books (isbn, title, author)
+    VALUES (?, ?, ?)
+    ON CONFLICT(isbn) DO UPDATE SET
+      title  = excluded.title,
+      author = excluded.author
+  `);
+
   console.log("✅ SQLite database initialized at:", dbPath);
 }
 
@@ -64,14 +74,28 @@ function createWindow() {
   });
 
   win.loadFile("library_management_container.html");
-
-  // Optional: open DevTools automatically while developing
-  // win.webContents.openDevTools();
 }
 
 // 3. App lifecycle
 app.whenReady().then(() => {
   initDatabase(); // make sure DB is ready first
+  // Handle "add book" requests from the renderer
+  ipcMain.handle("books:add", (event, book) => {
+    const { isbn, title, author } = book;
+
+    if (!isbn || !title) {
+      throw new Error("ISBN and title are required");
+    }
+
+    const result = insertOrUpdateBook.run(isbn, title, author || null);
+
+    return {
+      success: true,
+      changes: result.changes,
+      id: result.lastInsertRowid,
+    };
+  });
+
   createWindow();
 
   app.on("activate", () => {
@@ -85,5 +109,3 @@ app.on("window-all-closed", () => {
     app.quit();
   }
 });
-
-// (Later we'll add ipcMain handlers here that use `db`)

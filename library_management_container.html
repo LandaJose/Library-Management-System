@@ -158,6 +158,10 @@
         font-weight: bold;
         background: #f9f9f9;
       }
+
+      .hidden {
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -183,21 +187,22 @@
           <!-- <div class="student-name" id="studentName">Select a student…</div> -->
           <div class="mode-toggle">
             Mode:
-            <button id="addBooks">Add Books</button>
-            <button id="reviewBooks">Books</button>
-            <button id="modeCheckout" class="active">Check-Out</button>
-            <button id="modeCheckin">Check-In</button>
+            <button id="addBooks" class="" onclick="addBooks()">
+              Add Books
+            </button>
+            <button id="reviewBooks" class="" onclick="viewBooks()">
+              Books
+            </button>
+            <button id="checkOut" class="" onclick="checkOut()">
+              Check-Out
+            </button>
+            <button id="checkIn" class="" onclick="checkIn()">Check-In</button>
           </div>
         </div>
 
-        <div class="scan-section">
-          <label id="scanLabel">Scan Book ISBN</label>
-          <input
-            id="isbnInput"
-            type="text"
-            placeholder="Click here then scan ISBN…"
-          />
-          <div id="status" class="status"></div>
+        <div id="addBooksSection" class="hidden">
+          <label for="isbnInput">Scan Book ISBN</label>
+          <input type="text" id="isbnInput" placeholder="Scan Book" />
         </div>
 
         <div class="loan-list">
@@ -207,7 +212,6 @@
               <tr>
                 <th>Title</th>
                 <th>ISBN</th>
-                <th>Due Date</th>
               </tr>
             </thead>
             <tbody id="loanTableBody">
@@ -219,160 +223,96 @@
     </div>
 
     <script>
-      /*
-      // TEMP FAKE DATA – replace with DB calls later
-      const students = [
-        { id: 1, name: "Alex Martinez" },
-        { id: 2, name: "Brianna Lee" },
-        { id: 3, name: "Chris Johnson" },
-      ];
-
-      const fakeLoans = {
-        1: [
-          { title: "1984", isbn: "9780451524935", due: "2025-12-10" },
-          { title: "The Giver", isbn: "9780544336261", due: "2025-12-15" },
-        ],
-        2: [],
-        3: [{ title: "Hatchet", isbn: "9780689840920", due: "2025-12-08" }],
-      };
-
-      let selectedStudentId = null;
-      let mode = "checkout"; // or "checkin"
-
-      const studentListEl = document.getElementById("studentList");
-      const studentSearchEl = document.getElementById("studentSearch");
-      const studentNameEl = document.getElementById("studentName");
-      const loanTableBodyEl = document.getElementById("loanTableBody");
-      const isbnInputEl = document.getElementById("isbnInput");
-      const statusEl = document.getElementById("status");
-      const modeCheckoutBtn = document.getElementById("modeCheckout");
-      const modeCheckinBtn = document.getElementById("modeCheckin");
-      const scanLabelEl = document.getElementById("scanLabel");
-
-      // ---------- STUDENT LIST / SEARCH ----------
-
-      function renderStudentList(filter = "") {
-        const q = filter.toLowerCase();
-        studentListEl.innerHTML = "";
-        students
-          .filter((s) => s.name.toLowerCase().includes(q))
-          .forEach((s) => {
-            const li = document.createElement("li");
-            li.textContent = s.name;
-            li.dataset.id = s.id;
-            if (s.id === selectedStudentId) li.classList.add("active");
-            li.addEventListener("click", () => selectStudent(s.id));
-            studentListEl.appendChild(li);
-          });
-      }
-
-      function selectStudent(id) {
-        selectedStudentId = id;
-        const student = students.find((s) => s.id === id);
-        studentNameEl.textContent = student
-          ? student.name
-          : "Select a student…";
-        renderStudentList(studentSearchEl.value);
-        renderLoans();
-        clearStatus();
-        isbnInputEl.focus(); // Ready for scanning
-      }
-
-      function renderLoans() {
-        loanTableBodyEl.innerHTML = "";
-        if (!selectedStudentId) return;
-        const loans = fakeLoans[selectedStudentId] || [];
-        if (!loans.length) {
-          const tr = document.createElement("tr");
-          const td = document.createElement("td");
-          td.colSpan = 3;
-          td.textContent = "No books currently checked out.";
-          tr.appendChild(td);
-          loanTableBodyEl.appendChild(tr);
-          return;
+      function addBooks() {
+        clearActive();
+        document.getElementById("addBooks").classList.add("active");
+        document.getElementById("addBooksSection").classList.remove("hidden");
+        var isbnInput = document.getElementById("isbnInput");
+        if (isbnInput) {
+          isbnInput.value = "";
+          isbnInput.focus();
         }
-        loans.forEach((loan) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-          <td>${loan.title}</td>
-          <td>${loan.isbn}</td>
-          <td>${loan.due}</td>
-        `;
-          loanTableBodyEl.appendChild(tr);
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        var isbnInput = document.getElementById("isbnInput");
+
+        if (!isbnInput) return;
+
+        isbnInput.addEventListener("keydown", async function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+
+            var isbn = this.value.trim();
+            if (!isbn) return;
+
+            console.log(isbn + " THIS BOOK WAS SCANNED");
+
+            const info = await fetchBookInfoByIsbn(isbn);
+            console.log(info);
+
+            await saveBookToDB(isbn, info.title, info.author);
+
+            this.value = ""; // clear for next scan
+          }
         });
-      }
-
-      studentSearchEl.addEventListener("input", () => {
-        renderStudentList(studentSearchEl.value);
       });
 
-      // ---------- MODE TOGGLE ----------
-
-      function setMode(newMode) {
-        mode = newMode; // "checkout" or "checkin"
-        if (mode === "checkout") {
-          modeCheckoutBtn.classList.add("active");
-          modeCheckinBtn.classList.remove("active");
-          scanLabelEl.textContent = "Scan Book ISBN to CHECK OUT";
-        } else {
-          modeCheckoutBtn.classList.remove("active");
-          modeCheckinBtn.classList.add("active");
-          scanLabelEl.textContent = "Scan Book ISBN to CHECK IN";
+      async function saveBookToDB(isbn, title, author) {
+        try {
+          const result = await window.libraryAPI.addBook({
+            isbn,
+            title,
+            author,
+          });
+          console.log("Book saved to DB:", result);
+        } catch (err) {
+          console.error("Failed to save book:", err);
         }
-        clearStatus();
-        isbnInputEl.focus();
       }
 
-      modeCheckoutBtn.addEventListener("click", () => setMode("checkout"));
-      modeCheckinBtn.addEventListener("click", () => setMode("checkin"));
-
-      // ---------- SCAN HANDLING (works with scanner or keyboard) ----------
-
-      isbnInputEl.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          const isbn = isbnInputEl.value.trim();
-          if (!isbn) return;
-          handleScan(isbn);
-          isbnInputEl.value = "";
-        }
-      });
-
-      function handleScan(isbn) {
-        if (!selectedStudentId) {
-          showStatus("Select a student first.", "error");
-          return;
-        }
-
-        // For now, just fake behavior.
-        // Later you’ll replace this with window.api.checkoutBook / checkinBook
-        if (mode === "checkout") {
-          showStatus(`(FAKE) Checked OUT ISBN ${isbn} to this student.`, "ok");
-          // TODO: Call backend to:
-          //  - find book by ISBN
-          //  - choose available copy
-          //  - create loan
-          //  - refresh loans from DB
-        } else {
-          showStatus(`(FAKE) Checked IN ISBN ${isbn} from this student.`, "ok");
-          // TODO: Call backend for check-in
-        }
-
-        // After real call, call renderLoans() to update table
+      function viewBooks() {
+        clearActive();
+        document.getElementById("reviewBooks").classList.add("active");
       }
 
-      function showStatus(message, type) {
-        statusEl.textContent = message;
-        statusEl.classList.remove("ok", "error");
-        if (type) statusEl.classList.add(type);
+      function checkOut() {
+        clearActive();
+        document.getElementById("checkOut").classList.add("active");
       }
 
-      function clearStatus() {
-        showStatus("", null);
+      function checkIn() {
+        clearActive();
+        document.getElementById("checkIn").classList.add("active");
       }
 
-      // ---------- INITIAL RENDER ----------
-      renderStudentList();
-      */
+      function clearActive() {
+        document.querySelectorAll("button").forEach(function (btn) {
+          btn.classList.remove("active");
+        });
+        document.getElementById("addBooksSection").classList.add("hidden");
+      }
+
+      async function fetchBookInfoByIsbn(isbn) {
+        const res = await fetch(
+          "https://www.googleapis.com/books/v1/volumes?q=isbn:" +
+            encodeURIComponent(isbn)
+        );
+
+        const data = await res.json();
+
+        if (!data.items || !data.items.length) {
+          return null;
+        }
+
+        const volume = data.items[0].volumeInfo;
+
+        return {
+          title: volume.title || "Unknown title",
+          author:
+            (volume.authors && volume.authors.join(", ")) || "Unknown author",
+        };
+      }
     </script>
   </body>
 </html>
