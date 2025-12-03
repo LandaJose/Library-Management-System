@@ -4,7 +4,8 @@ const fs = require("fs");
 const Database = require("better-sqlite3");
 
 let db;
-let insertOrUpdateBook;
+let getMaxCopyNumberForIsbn;
+let insertBookCopy;
 
 // 1. Initialize SQLite and tables
 function initDatabase() {
@@ -21,44 +22,34 @@ function initDatabase() {
 
   // Create tables if they don't exist yet
   db.exec(`
-    CREATE TABLE IF NOT EXISTS books (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      isbn TEXT NOT NULL UNIQUE,
-      title TEXT NOT NULL,
-      author TEXT,
-      publisher TEXT,
-      published_year INTEGER
-    );
+  CREATE TABLE IF NOT EXISTS books (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    isbn TEXT NOT NULL,
+    book_copy_number INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    author TEXT
+  );
 
-    CREATE TABLE IF NOT EXISTS book_copies (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      book_id INTEGER NOT NULL,
-      copy_number INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'available',
-      location TEXT,
-      copy_barcode TEXT UNIQUE,
-      FOREIGN KEY (book_id) REFERENCES books(id)
-    );
+  CREATE TABLE IF NOT EXISTS loans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    k_books INTEGER NOT NULL,
+    student_id INTEGER NOT NULL,
+    checkout_date TEXT NOT NULL,
+    due_date TEXT NOT NULL,
+    return_date TEXT
+  );
+`);
 
-    CREATE TABLE IF NOT EXISTS loans (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      book_copy_id INTEGER NOT NULL,
-      student_id INTEGER NOT NULL,
-      checkout_date TEXT NOT NULL,
-      due_date TEXT NOT NULL,
-      return_date TEXT,
-      FOREIGN KEY (book_copy_id) REFERENCES book_copies(id)
-    );
-  `);
+  getMaxCopyNumberForIsbn = db.prepare(`
+  SELECT IFNULL(MAX(book_copy_number), 0) AS maxCopy
+  FROM books
+  WHERE isbn = ?
+`);
 
-  // Prepare a reusable INSERT/UPDATE statement for books
-  insertOrUpdateBook = db.prepare(`
-    INSERT INTO books (isbn, title, author)
-    VALUES (?, ?, ?)
-    ON CONFLICT(isbn) DO UPDATE SET
-      title  = excluded.title,
-      author = excluded.author
-  `);
+  insertBookCopy = db.prepare(`
+  INSERT INTO books (isbn, book_copy_number, title, author)
+  VALUES (?, ?, ?, ?)
+`);
 
   console.log("✅ SQLite database initialized at:", dbPath);
 }
@@ -87,12 +78,22 @@ app.whenReady().then(() => {
       throw new Error("ISBN and title are required");
     }
 
-    const result = insertOrUpdateBook.run(isbn, title, author || null);
+    // 1) Get current highest copy number for this ISBN
+    const row = getMaxCopyNumberForIsbn.get(isbn);
+    const nextCopyNumber = row.maxCopy + 1;
+
+    // 2) Insert a new row for this physical copy
+    const result = insertBookCopy.run(
+      isbn,
+      nextCopyNumber,
+      title,
+      author || null
+    );
 
     return {
       success: true,
-      changes: result.changes,
       id: result.lastInsertRowid,
+      bookCopyNumber: nextCopyNumber,
     };
   });
 
