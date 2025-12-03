@@ -6,4 +6,5 @@ window.addEventListener("DOMContentLoaded", () => {
 
 contextBridge.exposeInMainWorld("libraryAPI", {
   addBook: (book) => ipcRenderer.invoke("books:add", book),
+  listBooks: () => ipcRenderer.invoke("books:list"),
 });

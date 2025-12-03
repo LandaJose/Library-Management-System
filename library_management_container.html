@@ -162,6 +162,52 @@
       .hidden {
         display: none;
       }
+
+      /* STYLING FOR BOOKS IN LIBRARY TABLE */
+
+      .books-table {
+        width: 100%;
+        max-width: 800px;
+        border-collapse: collapse; /* remove gaps between cells */
+        margin-top: 10px;
+        font-family: Arial, sans-serif;
+      }
+
+      /* header row – purple bar like your example */
+      .books-table thead th {
+        background-color: #4a6741;
+        color: #ffffff;
+        padding: 10px 12px;
+        font-weight: bold;
+        text-align: left;
+        border: 1px solid #d0c4dd;
+      }
+
+      /* body cells */
+      .books-table td {
+        border: 1px solid #d0c4dd; /* grid lines (vertical + horizontal) */
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+
+      /* zebra striping for rows */
+      .books-table tbody tr:nth-child(even) {
+        background-color: #f9f7fb;
+      }
+
+      /* hover effect (optional) */
+      .books-table tbody tr:hover {
+        background-color: #efe7fb;
+      }
+
+      /* align last column (Copy #) to center & narrow */
+      .books-table td:last-child,
+      .books-table th:last-child {
+        text-align: center;
+        width: 80px;
+      }
+
+      /* END OF STYLING FOR BOOKS IN TABLE */
     </style>
   </head>
   <body>
@@ -205,7 +251,24 @@
           <input type="text" id="isbnInput" placeholder="Scan Book" />
         </div>
 
-        <div class="loan-list">
+        <div id="booksListSection" class="">
+          <h3>Books in Library</h3>
+          <input type="text" id="searchBook" placeholder="Search for a Book" />
+          <table id="booksTable" class="books-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Copy #</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- query stuff here by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div id="loan-list" class="hidden">
           <h3>Current Books</h3>
           <table>
             <thead>
@@ -214,28 +277,17 @@
                 <th>ISBN</th>
               </tr>
             </thead>
-            <tbody id="loanTableBody">
-              <!-- filled by JS -->
-            </tbody>
+            <tbody id="loanTableBody"></tbody>
           </table>
         </div>
       </div>
     </div>
 
     <script>
-      function addBooks() {
-        clearActive();
-        document.getElementById("addBooks").classList.add("active");
-        document.getElementById("addBooksSection").classList.remove("hidden");
-        var isbnInput = document.getElementById("isbnInput");
-        if (isbnInput) {
-          isbnInput.value = "";
-          isbnInput.focus();
-        }
-      }
-
       document.addEventListener("DOMContentLoaded", function () {
         var isbnInput = document.getElementById("isbnInput");
+
+        refreshBooksTable();
 
         if (!isbnInput) return;
 
@@ -257,6 +309,16 @@
           }
         });
       });
+      function addBooks() {
+        clearActive();
+        document.getElementById("addBooks").classList.add("active");
+        document.getElementById("addBooksSection").classList.remove("hidden");
+        var isbnInput = document.getElementById("isbnInput");
+        if (isbnInput) {
+          isbnInput.value = "";
+          isbnInput.focus();
+        }
+      }
 
       async function saveBookToDB(isbn, title, author) {
         try {
@@ -266,14 +328,47 @@
             author,
           });
           console.log("Book saved to DB:", result);
+          await refreshBooksTable();
         } catch (err) {
           console.error("Failed to save book:", err);
         }
       }
 
-      function viewBooks() {
+      async function viewBooks() {
         clearActive();
         document.getElementById("reviewBooks").classList.add("active");
+        document.getElementById("booksListSection").classList.remove("hidden");
+
+        await refreshBooksTable();
+      }
+
+      async function refreshBooksTable() {
+        // get all books from main process
+        const books = await window.libraryAPI.listBooks();
+
+        const tbody = document.querySelector("#booksTable tbody");
+        if (!tbody) return;
+
+        tbody.innerHTML = "";
+
+        books.forEach((b) => {
+          const tr = document.createElement("tr");
+
+          const tdTitle = document.createElement("td");
+          tdTitle.textContent = b.title;
+
+          const tdAuthor = document.createElement("td");
+          tdAuthor.textContent = b.author || "";
+
+          const tdCopy = document.createElement("td");
+          tdCopy.textContent = b.book_copy_number;
+
+          tr.appendChild(tdTitle);
+          tr.appendChild(tdAuthor);
+          tr.appendChild(tdCopy);
+
+          tbody.appendChild(tr);
+        });
       }
 
       function checkOut() {
@@ -291,6 +386,7 @@
           btn.classList.remove("active");
         });
         document.getElementById("addBooksSection").classList.add("hidden");
+        //document.getElementById("booksListSection").classList.add("hidden");
       }
 
       async function fetchBookInfoByIsbn(isbn) {

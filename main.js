@@ -6,6 +6,7 @@ const Database = require("better-sqlite3");
 let db;
 let getMaxCopyNumberForIsbn;
 let insertBookCopy;
+let getAllBooks;
 
 // 1. Initialize SQLite and tables
 function initDatabase() {
@@ -51,6 +52,15 @@ function initDatabase() {
   VALUES (?, ?, ?, ?)
 `);
 
+  getAllBooks = db.prepare(`
+    SELECT 
+      title
+      ,author
+      ,book_copy_number
+    FROM books
+    ORDER BY title ASC, book_copy_number ASC
+  `);
+
   console.log("✅ SQLite database initialized at:", dbPath);
 }
 
@@ -95,6 +105,11 @@ app.whenReady().then(() => {
       id: result.lastInsertRowid,
       bookCopyNumber: nextCopyNumber,
     };
+  });
+
+  ipcMain.handle("books:list", () => {
+    const rows = getAllBooks.all(); // runs SELECT
+    return rows;
   });
 
   createWindow();
