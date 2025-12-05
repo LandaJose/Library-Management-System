@@ -212,21 +212,6 @@
   </head>
   <body>
     <div class="app">
-      <!-- LEFT: Student search -->
-      <div class="sidebar">
-        <h2>Students</h2>
-        <div class="search-box">
-          <input
-            id="studentSearch"
-            type="text"
-            placeholder="Search student by name…"
-          />
-        </div>
-        <ul id="studentList" class="student-list">
-          <!-- filled by JS -->
-        </ul>
-      </div>
-
       <!-- RIGHT: Student details + scan -->
       <div class="main">
         <div class="header-row">
@@ -253,7 +238,12 @@
 
         <div id="booksListSection" class="">
           <h3>Books in Library</h3>
-          <input type="text" id="searchBook" placeholder="Search for a Book" />
+          <input
+            type="text"
+            id="searchBook"
+            oninput="searchForBook(this.value)"
+            placeholder="Search for a Book"
+          />
           <table id="booksTable" class="books-table">
             <thead>
               <tr>
@@ -268,7 +258,7 @@
           </table>
         </div>
 
-        <div id="loan-list" class="hidden">
+        <div id="loanListSection" class="hidden">
           <h3>Current Books</h3>
           <table>
             <thead>
@@ -280,6 +270,15 @@
             <tbody id="loanTableBody"></tbody>
           </table>
         </div>
+      </div>
+
+      <div id="checkOutSection" class="hidden">
+        <label for="isbnInput">Student's Full Name</label>
+        <input
+          type="text"
+          id="fullName"
+          placeholder="Enter Students Full Name"
+        />
       </div>
     </div>
 
@@ -371,9 +370,57 @@
         });
       }
 
+      async function searchForBook(book_title) {
+        // get all books from main process
+
+        var searchBook = book_title.trim();
+        if (!searchBook) refreshBooksTable();
+
+        console.log(searchBook + " THIS BOOK WAS Searched");
+
+        /* HAVE TO RUN SEARCH QUERY WHENEVER WE TYPE SOMETHING NOT SURE IF THIS IS GONNA BE TOO MUCH AND SHOULD JUST DO ONCLICK FOR A BUTTON */
+        const books = await window.libraryAPI.searchForBook(book_title);
+
+        const tbody = document.querySelector("#booksTable tbody");
+        if (!tbody) return;
+
+        tbody.innerHTML = "";
+
+        books.forEach((b) => {
+          const tr = document.createElement("tr");
+
+          const tdTitle = document.createElement("td");
+          tdTitle.textContent = b.title;
+
+          const tdAuthor = document.createElement("td");
+          tdAuthor.textContent = b.author || "";
+
+          const tdCopy = document.createElement("td");
+          tdCopy.textContent = b.book_copy_number;
+
+          tr.appendChild(tdTitle);
+          tr.appendChild(tdAuthor);
+          tr.appendChild(tdCopy);
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      function addBooks() {
+        clearActive();
+        document.getElementById("addBooks").classList.add("active");
+        document.getElementById("addBooksSection").classList.remove("hidden");
+        var isbnInput = document.getElementById("isbnInput");
+        if (isbnInput) {
+          isbnInput.value = "";
+          isbnInput.focus();
+        }
+      }
+
       function checkOut() {
         clearActive();
         document.getElementById("checkOut").classList.add("active");
+        document.getElementById("checkOutSection").classList.remove("hidden");
       }
 
       function checkIn() {

@@ -7,6 +7,7 @@ let db;
 let getMaxCopyNumberForIsbn;
 let insertBookCopy;
 let getAllBooks;
+let findBook;
 
 // 1. Initialize SQLite and tables
 function initDatabase() {
@@ -61,6 +62,16 @@ function initDatabase() {
     ORDER BY title ASC, book_copy_number ASC
   `);
 
+  findBook = db.prepare(`
+    SELECT 
+      title
+      ,author
+      ,book_copy_number
+    FROM books
+    WHERE title LIKE ?
+    ORDER BY title ASC, book_copy_number ASC
+  `);
+
   console.log("✅ SQLite database initialized at:", dbPath);
 }
 
@@ -109,6 +120,11 @@ app.whenReady().then(() => {
 
   ipcMain.handle("books:list", () => {
     const rows = getAllBooks.all(); // runs SELECT
+    return rows;
+  });
+
+  ipcMain.handle("books:search", (event, bookTitle) => {
+    const rows = findBook.all(`%${bookTitle}%`);
     return rows;
   });
 
