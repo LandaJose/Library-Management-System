@@ -8,6 +8,8 @@ let getMaxCopyNumberForIsbn;
 let insertBookCopy;
 let getAllBooks;
 let findBook;
+let getAllStudents;
+let findStudent;
 
 // 1. Initialize SQLite and tables
 function initDatabase() {
@@ -25,7 +27,7 @@ function initDatabase() {
   // Create tables if they don't exist yet
   db.exec(`
   CREATE TABLE IF NOT EXISTS books (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pk_books INTEGER PRIMARY KEY AUTOINCREMENT,
     isbn TEXT NOT NULL,
     book_copy_number INTEGER NOT NULL,
     title TEXT NOT NULL,
@@ -33,12 +35,18 @@ function initDatabase() {
   );
 
   CREATE TABLE IF NOT EXISTS loans (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pk_loans INTEGER PRIMARY KEY AUTOINCREMENT,
     k_books INTEGER NOT NULL,
     student_id INTEGER NOT NULL,
     checkout_date TEXT NOT NULL,
     due_date TEXT NOT NULL,
     return_date TEXT
+  );
+  
+  CREATE TABLE IF NOT EXISTS students (
+    pk_student INTEGER PRIMARY KEY AUTOINCREMENT,
+    full_name TEXT NOT NULL,
+    period INTEGER NOT NULL
   );
 `);
 
@@ -71,6 +79,23 @@ function initDatabase() {
     WHERE title LIKE ?
     ORDER BY title ASC, book_copy_number ASC
   `);
+
+  getAllStudents = db.prepare(`
+    SELECT 
+      full_name
+      ,period
+    FROM students
+    ORDER BY full_name ASC, period ASC
+  `);
+
+  findStudent = db.prepare(`
+  SELECT 
+    full_name
+    ,period
+  FROM students
+  WHERE full_name LIKE ?
+  ORDER BY full_name ASC, period ASC
+`);
 
   console.log("✅ SQLite database initialized at:", dbPath);
 }
@@ -125,6 +150,16 @@ app.whenReady().then(() => {
 
   ipcMain.handle("books:search", (event, bookTitle) => {
     const rows = findBook.all(`%${bookTitle}%`);
+    return rows;
+  });
+
+  ipcMain.handle("student:list", () => {
+    const rows = getAllStudents.all(); // runs SELECT
+    return rows;
+  });
+
+  ipcMain.handle("student:search", (event, studentName) => {
+    const rows = findStudent.all(`%${studentName}%`);
     return rows;
   });
 

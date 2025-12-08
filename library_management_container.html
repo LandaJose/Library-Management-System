@@ -218,26 +218,64 @@
           <!-- <div class="student-name" id="studentName">Select a student…</div> -->
           <div class="mode-toggle">
             Mode:
-            <button id="addBooks" class="" onclick="addBooks()">
-              Add Books
-            </button>
+            <!-- 
+              <button id="addBooks" class="" onclick="addBooks()"> 
+                Add Books
+              </button>
+            -->
             <button id="reviewBooks" class="" onclick="viewBooks()">
               Books
+            </button>
+            <button id="viewStudents" class="" onclick="viewStudents()">
+              Students
             </button>
             <button id="checkOut" class="" onclick="checkOut()">
               Check-Out
             </button>
             <button id="checkIn" class="" onclick="checkIn()">Check-In</button>
+            <button
+              id="studentAccount"
+              class=""
+              onclick="viewStudentsAccount()"
+            >
+              Students Account
+            </button>
           </div>
         </div>
 
-        <div id="addBooksSection" class="hidden">
+        <!-- Add Book Section Start -->
+        <!--
+         <div id="addBooksSection" class="hidden">
           <label for="isbnInput">Scan Book ISBN</label>
           <input type="text" id="isbnInput" placeholder="Scan Book" />
         </div>
+        -->
+        <!-- Add Book Section End -->
 
+        <!-- Check out Section Start -->
+        <div id="checkOutSection" class="hidden">
+          <label for="studentName">Student's Full Name</label>
+          <input
+            type="text"
+            id="fullName"
+            placeholder="Enter Students Full Name"
+          />
+          <label for="bookSelected">Scan Book</label>
+          <input type="text" id="checkOutScanBook" placeholder="Scan Book" />
+        </div>
+        <!-- Check Out Section End -->
+
+        <!-- Books Tab Start -->
         <div id="booksListSection" class="">
+          <!--
+            <label for="isbnInput">Scan Book to Add</label>
+            <input type="text" id="isbnInput" placeholder="Scan Book" />
+          -->
+          <label for="isbnInput">Scan Book to Add</label>
+          <input type="text" id="isbnInput" placeholder="Scan Book to Add" />
+
           <h3>Books in Library</h3>
+          <label for="bookSearch">Book Search</label>
           <input
             type="text"
             id="searchBook"
@@ -257,6 +295,44 @@
             </tbody>
           </table>
         </div>
+        <!-- Book Tab End -->
+
+        <!-- Students Tab Start -->
+        <div id="studentListSection" class="hidden">
+          <label for="addStudent">Add Student</label>
+          <input
+            type="text"
+            id="fullNameInput"
+            placeholder="Enter Students Full Name"
+          />
+          <input
+            type="text"
+            id="periodInput"
+            placeholder="Enter Students Period"
+          />
+
+          <button id="addStudent" onclick="addStudent()">Add Student</button>
+
+          <h3>Students</h3>
+          <input
+            type="text"
+            id="searchForStudent"
+            oninput="searchForStudent(this.value)"
+            placeholder="Search for a Student"
+          />
+          <table id="studentTable" class="books-table">
+            <thead>
+              <tr>
+                <th>Full Name</th>
+                <th>Period</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- query stuff here by JS -->
+            </tbody>
+          </table>
+        </div>
+        <!-- Students Tab End -->
 
         <div id="loanListSection" class="hidden">
           <h3>Current Books</h3>
@@ -270,15 +346,6 @@
             <tbody id="loanTableBody"></tbody>
           </table>
         </div>
-      </div>
-
-      <div id="checkOutSection" class="hidden">
-        <label for="isbnInput">Student's Full Name</label>
-        <input
-          type="text"
-          id="fullName"
-          placeholder="Enter Students Full Name"
-        />
       </div>
     </div>
 
@@ -309,9 +376,9 @@
         });
       });
       function addBooks() {
-        clearActive();
-        document.getElementById("addBooks").classList.add("active");
-        document.getElementById("addBooksSection").classList.remove("hidden");
+        //aclearActive();
+        //document.getElementById("addBooks").classList.add("active");
+        //document.getElementById("addBooksSection").classList.remove("hidden");
         var isbnInput = document.getElementById("isbnInput");
         if (isbnInput) {
           isbnInput.value = "";
@@ -408,8 +475,8 @@
 
       function addBooks() {
         clearActive();
-        document.getElementById("addBooks").classList.add("active");
-        document.getElementById("addBooksSection").classList.remove("hidden");
+        //document.getElementById("addBooks").classList.add("active");
+        //document.getElementById("addBooksSection").classList.remove("hidden");
         var isbnInput = document.getElementById("isbnInput");
         if (isbnInput) {
           isbnInput.value = "";
@@ -432,8 +499,10 @@
         document.querySelectorAll("button").forEach(function (btn) {
           btn.classList.remove("active");
         });
-        document.getElementById("addBooksSection").classList.add("hidden");
-        //document.getElementById("booksListSection").classList.add("hidden");
+        //document.getElementById("addBooksSection").classList.add("hidden");
+        document.getElementById("checkOutSection").classList.add("hidden");
+        document.getElementById("booksListSection").classList.add("hidden");
+        document.getElementById("studentListSection").classList.add("hidden");
       }
 
       async function fetchBookInfoByIsbn(isbn) {
@@ -455,6 +524,78 @@
           author:
             (volume.authors && volume.authors.join(", ")) || "Unknown author",
         };
+      }
+
+      <!-- JS FOR VIEW STUDENT AND ADD STUDENT ETC-->
+
+      async function viewStudents() {
+        clearActive();
+        document.getElementById("viewStudents").classList.add("active");
+        document
+          .getElementById("studentListSection")
+          .classList.remove("hidden");
+        await refreshStudentTable();
+      }
+
+      async function refreshStudentTable() {
+        // get all books from main process
+        const student = await window.libraryAPI.viewStudents();
+
+        const tbody = document.querySelector("#studentTable tbody");
+        if (!tbody) return;
+
+        tbody.innerHTML = "";
+
+        student.forEach((b) => {
+          const tr = document.createElement("tr");
+
+          const tdFullName = document.createElement("td");
+          tdFullName.textContent = b.full_name;
+
+          const tdPeriod = document.createElement("td");
+          tdPeriod.textContent = b.period;
+
+          tr.appendChild(tdFullName);
+          tr.appendChild(tdPeriod);
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      async function searchForStudent(studentName) {
+        // get all books from main process
+
+        var searchStudent = studentName.trim();
+        if (!searchStudent) refreshStudentTable();
+
+        console.log(searchStudent + " THIS Student WAS Searched");
+
+        /* HAVE TO RUN SEARCH QUERY WHENEVER WE TYPE SOMETHING NOT SURE IF THIS IS GONNA BE TOO MUCH AND SHOULD JUST DO ONCLICK FOR A BUTTON */
+
+        const student = await window.libraryAPI.searchForStudent(studentName);
+
+        const tbody = document.querySelector("#studentTable tbody");
+        if (!tbody) return;
+
+        tbody.innerHTML = "";
+
+        student.forEach((b) => {
+          const tr = document.createElement("tr");
+
+          const tdFullName = document.createElement("td");
+          tdFullName.textContent = b.full_name;
+
+          const tdPeriod = document.createElement("td");
+          tdPeriod.textContent = b.period;
+
+          const tdCopy = document.createElement("td");
+          tdCopy.textContent = b.book_copy_number;
+
+          tr.appendChild(tdFullName);
+          tr.appendChild(tdPeriod);
+
+          tbody.appendChild(tr);
+        });
       }
     </script>
   </body>

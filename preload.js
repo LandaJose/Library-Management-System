@@ -8,4 +8,7 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   addBook: (book) => ipcRenderer.invoke("books:add", book),
   listBooks: () => ipcRenderer.invoke("books:list"),
   searchForBook: (book_title) => ipcRenderer.invoke("books:search", book_title),
+  viewStudents: () => ipcRenderer.invoke("student:list"),
+  searchForStudent: (studentName) =>
+    ipcRenderer.invoke("student:search", studentName),
 });
