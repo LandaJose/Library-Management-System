@@ -11,4 +11,6 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   viewStudents: () => ipcRenderer.invoke("student:list"),
   searchForStudent: (studentName) =>
     ipcRenderer.invoke("student:search", studentName),
+  addStudent: (student) => ipcRenderer.invoke("student:add", student),
+  //listStudents: () => ipcRenderer.invoke("students:list"),
 });

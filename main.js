@@ -10,6 +10,7 @@ let getAllBooks;
 let findBook;
 let getAllStudents;
 let findStudent;
+let insertStudent;
 
 // 1. Initialize SQLite and tables
 function initDatabase() {
@@ -85,7 +86,7 @@ function initDatabase() {
       full_name
       ,period
     FROM students
-    ORDER BY full_name ASC, period ASC
+    ORDER BY period ASC, full_name asc
   `);
 
   findStudent = db.prepare(`
@@ -96,6 +97,11 @@ function initDatabase() {
   WHERE full_name LIKE ?
   ORDER BY full_name ASC, period ASC
 `);
+
+  insertStudent = db.prepare(`
+    INSERT INTO students (full_name, period)
+    VALUES (?, ?)
+  `);
 
   console.log("✅ SQLite database initialized at:", dbPath);
 }
@@ -161,6 +167,22 @@ app.whenReady().then(() => {
   ipcMain.handle("student:search", (event, studentName) => {
     const rows = findStudent.all(`%${studentName}%`);
     return rows;
+  });
+
+  // main.js
+
+  ipcMain.handle("student:add", (event, student) => {
+    // CHANGE THIS LINE: extract full_name and period from the student object
+    const { full_name, period } = student;
+
+    // Now these variables exist, so this check will work
+    if (!full_name || period === undefined || period === null) {
+      throw new Error("full_name and period are required");
+    }
+
+    const result = insertStudent.run(full_name, Number(period));
+
+    return { success: true, id: result.lastInsertRowid };
   });
 
   createWindow();

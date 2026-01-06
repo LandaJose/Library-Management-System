@@ -233,6 +233,7 @@
               Check-Out
             </button>
             <button id="checkIn" class="" onclick="checkIn()">Check-In</button>
+            <!---
             <button
               id="studentAccount"
               class=""
@@ -240,6 +241,7 @@
             >
               Students Account
             </button>
+            --->
           </div>
         </div>
 
@@ -474,7 +476,7 @@
       }
 
       function addBooks() {
-        clearActive();
+        //clearActive();
         //document.getElementById("addBooks").classList.add("active");
         //document.getElementById("addBooksSection").classList.remove("hidden");
         var isbnInput = document.getElementById("isbnInput");
@@ -482,6 +484,52 @@
           isbnInput.value = "";
           isbnInput.focus();
         }
+      }
+
+      async function addStudent() {
+        //async function saveBookToDB(isbn, title, author) {
+
+        const full_name = document.getElementById("fullNameInput").value;
+        const period = document.getElementById("periodInput").value;
+
+        console.log("THIS IS THE FULL NAME-----------", full_name);
+        console.log("THIS IS THE PERIOD HERE------------", period);
+
+        try {
+          const result = await window.libraryAPI.addStudent({
+            full_name,
+            period,
+          });
+          console.log("Student saved to DB:", result);
+          await refreshStudentTable();
+        } catch (err) {
+          console.error("Failed to save student:", err);
+        }
+      }
+
+      async function refreshStudentTable() {
+        // get all students from main process
+        const students = await window.libraryAPI.listStudents();
+
+        const tbody = document.querySelector("#studentTable tbody");
+        if (!tbody) return;
+
+        tbody.innerHTML = "";
+
+        students.forEach((b) => {
+          const tr = document.createElement("tr");
+
+          const tdFullName = document.createElement("td");
+          tdFullName.textContent = b.title;
+
+          const tdPeriod = document.createElement("td");
+          tdPeriod.textContent = b.tdFullName || "";
+
+          tr.appendChild(tdFullName);
+          tr.appendChild(tdPeriod);
+
+          tbody.appendChild(tr);
+        });
       }
 
       function checkOut() {
