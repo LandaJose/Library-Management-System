@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<!doctype html>
 <html>
   <head>
     <!-- <meta charset="UTF-8" /> -->
@@ -229,7 +230,11 @@
             <button id="viewStudents" class="" onclick="viewStudents()">
               Students
             </button>
-            <button id="checkOut" class="" onclick="checkOut()">
+            <button
+              id="checkOut"
+              class=""
+              onclick="(checkOut(), searchStudentList())"
+            >
               Check-Out
             </button>
             <button id="checkIn" class="" onclick="checkIn()">Check-In</button>
@@ -256,14 +261,69 @@
 
         <!-- Check out Section Start -->
         <div id="checkOutSection" class="hidden">
-          <label for="studentName">Student's Full Name</label>
-          <input
-            type="text"
-            id="fullName"
-            placeholder="Enter Students Full Name"
-          />
+          <label for="students">Select a Period </label>
+          <select
+            id="periodSelected"
+            class="selectpicker"
+            data-live-search="true"
+            onchange="updateStudents()"
+          >
+            <option value="">No Selection</option>
+            <option value="1">Period 1</option>
+            <option value="2">Period 2</option>
+            <option value="3">Period 3</option>
+            <option value="4">Period 4</option>
+            <option value="5">Period 5</option>
+            <option value="6">Period 6</option>
+          </select>
+
+          <label for="students">Select a Student </label>
+          <select
+            id="studentSelect"
+            class="selectpicker"
+            data-live-search="true"
+          ></select>
+
+          <!-- Have to check that this scanned book exists in our Books DBs, if there is more than one option
+            then make sure that #of copies is not > than number of checkout with null end date -->
           <label for="bookSelected">Scan Book</label>
           <input type="text" id="checkOutScanBook" placeholder="Scan Book" />
+
+          <table id="checkOutTable" class="books-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Period</th>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Copy #</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Delete</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- query stuff here by JS -->
+            </tbody>
+          </table>
+
+          <!--- 
+          <label for="books">Select Book</label>
+          <select class="selectpicker" data-live-search="true">
+            <option value="">No Selection</option>
+          </select>
+          --->
+
+          <!--- 
+            <label for="studentName">Student's Full Name</label>
+            <input
+              type="text"
+              id="fullName"
+              placeholder="Enter Students Full Name"
+            />
+            <label for="bookSelected">Scan Book</label>
+            <input type="text" id="checkOutScanBook" placeholder="Scan Book" />
+          --->
         </div>
         <!-- Check Out Section End -->
 
@@ -290,6 +350,7 @@
                 <th>Title</th>
                 <th>Author</th>
                 <th>Copy #</th>
+                <th>Delete</th>
               </tr>
             </thead>
             <tbody>
@@ -327,6 +388,7 @@
               <tr>
                 <th>Full Name</th>
                 <th>Period</th>
+                <th>Delete</th>
               </tr>
             </thead>
             <tbody>
@@ -408,6 +470,29 @@
         document.getElementById("booksListSection").classList.remove("hidden");
 
         await refreshBooksTable();
+      }
+
+      async function searchStudentList() {
+        const students = await window.libraryAPI.viewStudents();
+
+        const selectElement = document.getElementById("studentSelect");
+
+        selectElement.innerHTML = '<option value="">No Selection</option>';
+
+        students.forEach((student) => {
+          const option = document.createElement("option");
+
+          option.textContent = `${student.full_name} - Period ${student.period}`;
+
+          option.value = student.full_name;
+
+          // Add the option to the select menu
+          selectElement.appendChild(option);
+        });
+
+        if ($(".selectpicker").selectpicker) {
+          $("#studentSelect").selectpicker("refresh");
+        }
       }
 
       async function refreshBooksTable() {
@@ -556,7 +641,7 @@
       async function fetchBookInfoByIsbn(isbn) {
         const res = await fetch(
           "https://www.googleapis.com/books/v1/volumes?q=isbn:" +
-            encodeURIComponent(isbn)
+            encodeURIComponent(isbn),
         );
 
         const data = await res.json();
@@ -644,6 +729,10 @@
 
           tbody.appendChild(tr);
         });
+      }
+
+      function updateStudents() {
+        console.log("Update Students HERE-----------");
       }
     </script>
   </body>
